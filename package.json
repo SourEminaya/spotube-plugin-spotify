@@ -5,16 +5,25 @@
   "type": "module",
   "main": "dist/index.js",
   "scripts": {
-    "build": "node ./esbuild.js"
+    "build": "node ./esbuild.js",
+    "format": "biome format ./src",
+    "lint": "biome lint ./src"
   },
   "dependencies": {
-    "@spotube-app/plugin": "github:KRTirtho/spotube-plugin"
+    "@spotube-app/plugin": "link:../../../spotube-plugin",
+    "date-fns": "^4.1.0",
+    "ky": "^1.14.1",
+    "semver": "^7.7.3",
+    "spotify-gql-client": "link:../spotify-gql-client",
+    "totp-generator": "^2.0.0"
   },
   "keywords": [],
   "author": "Sonic Liberation",
   "license": "MIT",
   "packageManager": "pnpm@10.20.0",
   "devDependencies": {
+    "@biomejs/biome": "^2.3.8",
+    "@types/semver": "^7.7.1",
     "esbuild": "^0.27.0",
     "jszip": "^3.10.1",
     "typescript": "^5.9.3"
