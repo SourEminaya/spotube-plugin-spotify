@@ -9,7 +9,7 @@ import { SearchEndpoint } from "./segments/search.js";
 import { TrackEndpoint } from "./segments/track.js";
 import { UserEndpoint } from "./segments/user.js";
 
-export class SpotifyMetadataProviderPlugin {
+export default class SpotifyMetadataProviderPlugin {
 	auth: SpotifyAuthEndpoint;
 	api: SpotifyGqlApi;
 
