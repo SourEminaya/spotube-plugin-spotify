@@ -1,4 +1,9 @@
-import { type Cookie, localStorage, Webview } from "@spotube-app/plugin";
+import {
+	type Cookie,
+	type IAuthEndpoint,
+	localStorage,
+	WebView,
+} from "@spotube-app/plugin";
 import type { KyInstance } from "ky";
 import ky from "ky";
 import { differenceInMilliseconds, isAfter } from "date-fns";
@@ -23,22 +28,30 @@ interface Credentials {
 	expiration: number;
 }
 
-class SpotifyAuthEndpoint {
+class SpotifyAuthEndpoint implements IAuthEndpoint {
 	credentials?: Credentials | null = null;
 	client: KyInstance;
-	onEvent: ((data: string) => void) | null = null;
+	onEvent:
+		| ((auth: InstanceType<typeof SpotifyAuthEndpoint>, data: string) => void)
+		| null = null;
 	timer?: number = undefined;
 
-	constructor(onEvent: (data: string) => void) {
+	constructor(
+		onEvent?: (
+			auth: InstanceType<typeof SpotifyAuthEndpoint>,
+			data: string,
+		) => void,
+	) {
+		if (onEvent) {
+			this.onEvent = onEvent;
+		}
 		this.client = ky.extend({});
-		this.onEvent = onEvent;
-
 		this.initializeFromLocalStorage();
 	}
 
 	fireEvent(event: string) {
 		if (this.onEvent) {
-			this.onEvent(event);
+			this.onEvent(this, event);
 		}
 
 		if (event === "recovered" || event === "login") {
@@ -192,7 +205,7 @@ class SpotifyAuthEndpoint {
 
 	refreshCredentials() {
 		if (!this.credentials?.cookies) {
-			console.log(
+			console.info(
 				"[refreshCredentials] No cookie found. Cannot refresh credentials.",
 			);
 			return;
@@ -207,17 +220,17 @@ class SpotifyAuthEndpoint {
 	}
 
 	async authenticate(): Promise<void> {
-		const webview = await Webview.create("https://accounts.spotify.com/");
+		const webview = await WebView.create("https://accounts.spotify.com/");
 
-		webview.onUrlRequestStream(async (url) => {
+		webview.onUrlChange(async (url) => {
 			const safeUrl = url.endsWith("/")
 				? url.substring(0, url.length - 1)
 				: url;
-			const exp = /https:\/\/accounts.spotify.com\/.+\/status/gi;
+			const exp = /https:\/\/accounts.spotify.com\/.*\/?status/gi;
 
 			if (exp.test(safeUrl)) {
-				const cookies = await webview.getCookies(url);
-				await this.login(cookies.map((cookie) => cookie));
+				const cookies = await webview.cookies(url);
+				await this.login(cookies);
 				await webview.close();
 			}
 		});
@@ -225,7 +238,7 @@ class SpotifyAuthEndpoint {
 		await webview.open();
 	}
 
-	logout() {
+	async logout() {
 		this.credentials = null;
 		localStorage.removeItem("credentials");
 		this.fireEvent("logout");

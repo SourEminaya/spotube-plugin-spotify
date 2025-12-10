@@ -24,9 +24,11 @@ export default class SpotifyMetadataProviderPlugin {
 
 	constructor() {
 		this.api = new SpotifyGqlApi();
-		this.auth = new SpotifyAuthEndpoint((_event) => {
-			this.api.setAccessToken(this.auth.credentials?.accessToken);
+
+		this.auth = new SpotifyAuthEndpoint((auth, _event)=>{
+			this.api.setAccessToken(auth.credentials?.accessToken)
 		});
+
 		this.album = new AlbumEndpoint(this.api);
 		this.artist = new ArtistEndpoint(this.api);
 		this.browse = new BrowseEndpoint(this.api, this.auth);
@@ -35,5 +37,6 @@ export default class SpotifyMetadataProviderPlugin {
 		this.track = new TrackEndpoint(this.api);
 		this.user = new UserEndpoint(this.api);
 		this.core = new CorePlugin();
+
 	}
 }

@@ -18,7 +18,7 @@ export class BrowseEndpoint implements IBrowseEndpoint {
 	}
 
 	async sections(_offset = 0, limit = 20) {
-		const timeZone = await Timezone.getLocalTimeZone();
+		const timeZone = await Timezone.getLocalTimezone();
 		const sections = await this.client.browse.home({
 			timeZone,
 			spTCookie: this.auth.credentials?.cookies.filter(
@@ -58,7 +58,7 @@ export class BrowseEndpoint implements IBrowseEndpoint {
 	}
 
 	async sectionItems(id: string, offset = 0, limit = 20) {
-		const timeZone = await Timezone.getLocalTimeZone();
+		const timeZone = await Timezone.getLocalTimezone();
 		const section = await this.client.browse.homeSection(id, {
 			timeZone,
 			spTCookie: this.auth.credentials?.cookies.filter(
