@@ -23,7 +23,7 @@ export class ArtistEndpoint implements IArtistEndpoint {
 	async albums(id: string, offset = 0, limit = 50) {
 		const data = await this.client.artist.albums(id, { offset, limit });
 
-		return Converters.paginated(data, (items) => Converters.fullAlbum(items));
+		return Converters.paginated(data, (items) => Converters.simpleAlbum(items));
 	}
 
 	async save(artistIds: string[]) {

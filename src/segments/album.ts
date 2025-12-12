@@ -16,14 +16,14 @@ export class AlbumEndpoint implements IAlbumEndpoint {
 
 	async tracks(id: string, offset = 0, limit = 50) {
 		const data = await this.client.album.tracks(id, { offset, limit });
-
+		
 		return Converters.paginated(data, (items) => Converters.fullTrack(items));
 	}
 
 	async releases(offset = 0, limit = 50) {
 		const data = await this.client.album.releases({ offset, limit });
-
-		return Converters.paginated(data, (items) => Converters.fullAlbum(items));
+		const result = Converters.paginated(data, (items) => Converters.fullAlbum(items));
+		return result;
 	}
 
 	async save(albumIds: string[]) {

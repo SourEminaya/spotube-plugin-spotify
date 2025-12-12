@@ -22,7 +22,7 @@ export class PlaylistEndpoint implements IPlaylistEndpoint {
 		// Spotify playlists can contain local tracks which do not have an ID and cannot be played
 		// We filter them out here to avoid issues in the client
 		paginated.items = paginated.items.filter(
-			(item) => item != null && item.id != null,
+			(item) => typeof item.id === "string",
 		);
 
 		return paginated;

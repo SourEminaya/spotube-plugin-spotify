@@ -38,10 +38,10 @@ export class Converters {
 		const hasMore = data.total > data.offset + data.items.length;
 
 		return {
-			limit: data.limit,
-			nextOffset: hasMore ? data.offset + data.limit : null,
+			limit: Math.trunc(data.limit),
+			nextOffset: hasMore ? Math.trunc(data.offset + data.limit) : null,
 			hasMore: hasMore,
-			total: data.total,
+			total: Math.trunc(data.total),
 			items: data.items.map(convertItems),
 		};
 	}
@@ -52,9 +52,9 @@ export class Converters {
 	): SpotubePaginationResponseObject<R> {
 		return {
 			hasMore: false,
-			limit: data.length,
+			limit: Math.trunc(data.length),
 			nextOffset: null,
-			total: data.length,
+			total: Math.trunc(data.length),
 			items: data.map(cb),
 		};
 	}
@@ -65,11 +65,11 @@ export class Converters {
 			id: track.id,
 			name: track.name,
 			externalUri:
-				track.external_urls.spotify ??
+				track?.external_urls?.spotify ??
 				`https://open.spotify.com/track/${track.id}`,
 			explicit: track.explicit ?? false,
 			durationMs: track.duration_ms ?? 0,
-			isrc: track.external_ids.isrc ?? "",
+			isrc: track.external_ids?.isrc ?? "",
 			artists: track.artists.map(Converters.simpleArtist),
 			album: Converters.simpleAlbum(track.album),
 		};
@@ -81,12 +81,12 @@ export class Converters {
 			id: album.id,
 			name: album.name,
 			externalUri:
-				album.external_urls.spotify ??
+				album.external_urls?.spotify ??
 				`https://open.spotify.com/album/${album.id}`,
 			releaseDate: album.release_date ?? "",
 			totalTracks: (album as Album).total_tracks ?? 0,
 			artists: album.artists.map(Converters.simpleArtist),
-			images: album.images as SpotubeImageObject[],
+			images: album.images.map((e)=>({...e, typeName: "image"})),
 			albumType: ((album.album_type === "ep"
 				? "compilation"
 				: album.album_type) ?? "album") as SpotubeAlbumType,
@@ -96,17 +96,17 @@ export class Converters {
 	}
 
 	static simpleAlbum(
-		album: SimplifiedAlbum | GqlAlbumSimplified,
+		album: Album | SimplifiedAlbum | GqlAlbumSimplified,
 	): SpotubeSimpleAlbumObject {
 		return {
 			id: album.id,
 			name: album.name,
 			externalUri:
-				album.external_urls.spotify ??
+				album.external_urls?.spotify ??
 				`https://open.spotify.com/album/${album.id}`,
 			releaseDate: (album as SimplifiedAlbum).release_date ?? null,
 			artists: album.artists.map(Converters.simpleArtist),
-			images: album.images as SpotubeImageObject[],
+			images: album.images.map((e)=>({...e, typeName: "image"})),
 			albumType: ((album.album_type === "ep"
 				? "compilation"
 				: album.album_type) ?? "album") as SpotubeAlbumType,
@@ -119,11 +119,11 @@ export class Converters {
 			id: artist.id,
 			name: artist.name,
 			externalUri:
-				artist.external_urls.spotify ??
+				artist.external_urls?.spotify ??
 				`https://open.spotify.com/artist/${artist.id}`,
-			images: artist.images as SpotubeImageObject[],
-			genres: (artist as Artist).genres ?? null,
-			followers: (artist as Artist).followers?.total ?? null,
+			images: artist.images.map((e)=>({...e, typeName: "image"})),
+			genres: (artist as Artist)?.genres ?? null,
+			followers: (artist as Artist)?.followers?.total ?? null,
 			typeName: "artist_full",
 		};
 	}
@@ -136,9 +136,9 @@ export class Converters {
 			id: artist.id,
 			name: artist.name,
 			externalUri:
-				artist.external_urls.spotify ??
+				artist.external_urls?.spotify ??
 				`https://open.spotify.com/artist/${artist.id}`,
-			images: (artist as Artist).images as SpotubeImageObject[],
+			images: (artist as Artist)?.images?.map((e)=>({...e, typeName: "image"})),
 		};
 	}
 
@@ -147,11 +147,11 @@ export class Converters {
 			id: data.id,
 			name: data.display_name,
 			images:
-				((data as User | GqlUser).images as
+				((data as User | GqlUser)?.images?.map((e)=>({...e, typeName: "image"})) as
 					| SpotubeImageObject[]
 					| undefined) ?? [],
 			externalUri:
-				data.external_urls.spotify ??
+				data.external_urls?.spotify ??
 				`https://open.spotify.com/user/${data.id}`,
 			typeName: "user",
 		};
@@ -165,9 +165,9 @@ export class Converters {
 			id: playlist.id,
 			name: playlist.name,
 			description: playlist.description,
-			images: playlist.images as SpotubeImageObject[],
+			images: playlist.images.map((e)=>({...e, typeName: "image"})),
 			externalUri:
-				playlist.external_urls.spotify ??
+				playlist.external_urls?.spotify ??
 				`https://open.spotify.com/playlist/${playlist.id}`,
 			owner: Converters.simpleUser(playlist.owner),
 		};
@@ -182,13 +182,29 @@ export class Converters {
 			id: playlist.id,
 			name: playlist.name,
 			description: playlist.description,
-			images: playlist.images as SpotubeImageObject[],
+			images: playlist.images.map((e)=>({...e, typeName: "image"})),
 			externalUri:
-				playlist.external_urls.spotify ??
+				playlist.external_urls?.spotify ??
 				`https://open.spotify.com/playlist/${playlist.id}`,
 			owner: Converters.simpleUser(playlist.owner),
-			collaborative: (playlist as Playlist).collaborative ?? false,
-			public: (playlist as Playlist).public ?? false,
+			collaborative: (playlist as Playlist)?.collaborative ?? false,
+			public: (playlist as Playlist)?.public ?? false,
+		};
+	}
+
+	static simplePlaylist(
+		playlist: Playlist | GqlPlaylistSimplified,
+	): SpotubeSimplePlaylistObject {
+		return {
+			typeName: "playlist_simple",
+			id: playlist.id,
+			name: playlist.name,
+			description: playlist.description,
+			images: playlist.images.map((e)=>({...e, typeName: "image"})),
+			externalUri:
+				playlist.external_urls?.spotify ??
+				`https://open.spotify.com/playlist/${playlist.id}`,
+			owner: Converters.simpleUser(playlist.owner),
 		};
 	}
 }

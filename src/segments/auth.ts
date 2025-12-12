@@ -1,11 +1,9 @@
 import {
 	type Cookie,
-	type IAuthEndpoint,
+	IAuthEndpoint,
 	localStorage,
 	WebView,
 } from "@spotube-app/plugin";
-import type { KyInstance } from "ky";
-import ky from "ky";
 import { differenceInMilliseconds, isAfter } from "date-fns";
 import { TOTP } from "totp-generator";
 
@@ -28,11 +26,13 @@ interface Credentials {
 	expiration: number;
 }
 
-class SpotifyAuthEndpoint implements IAuthEndpoint {
+class SpotifyAuthEndpoint extends IAuthEndpoint {
 	credentials?: Credentials | null = null;
-	client: KyInstance;
 	onEvent:
-		| ((auth: InstanceType<typeof SpotifyAuthEndpoint>, data: string) => void)
+		| ((
+				auth: InstanceType<typeof SpotifyAuthEndpoint>,
+				data: "login" | "logout" | "refreshed" | "recovered",
+		  ) => void)
 		| null = null;
 	timer?: number = undefined;
 
@@ -42,16 +42,23 @@ class SpotifyAuthEndpoint implements IAuthEndpoint {
 			data: string,
 		) => void,
 	) {
+		super();
 		if (onEvent) {
 			this.onEvent = onEvent;
 		}
-		this.client = ky.extend({});
 		this.initializeFromLocalStorage();
 	}
 
-	fireEvent(event: string) {
+	fireEvent(event: "login" | "logout" | "refreshed" | "recovered") {
 		if (this.onEvent) {
 			this.onEvent(this, event);
+		}
+		if (this.onAuthEvent) {
+			this.onAuthEvent(
+				event === "recovered" || event === "refreshed"
+					? "refreshSession"
+					: event,
+			);
 		}
 
 		if (event === "recovered" || event === "login") {
@@ -86,35 +93,36 @@ class SpotifyAuthEndpoint implements IAuthEndpoint {
 		return differenceInMilliseconds(expirationTime, currentTime) - 60000; // Refresh 1 minute before expiration
 	}
 
-	initializeFromLocalStorage() {
-		const credentialsStr = localStorage.getItem("credentials");
-		if (credentialsStr != null) {
-			this.credentials = JSON.parse(credentialsStr);
-			if (this.isExpired()) {
-				this.refreshCredentials();
-			} else {
-				this.fireEvent("recovered");
+	async initializeFromLocalStorage() {
+		try {
+			const credentialsStr = localStorage.getItem("credentials");
+			if (credentialsStr != null) {
+				this.credentials = JSON.parse(credentialsStr);
+				if (this.isExpired()) {
+					await this.refreshCredentials();
+				} else {
+					this.fireEvent("recovered");
+				}
 			}
+		} catch (error) {
+			console.error("[initializeFromLocalStorage]:", error);
 		}
 	}
 
 	async getLatestNuance(): Promise<NuancePayload> {
-		// Future<{v: int, s: string}>
-		const data = await this.client
-			.get(
-				"https://codeberg.org/sonic-liberation/blubber-junkyard-elitism/raw/branch/main/nuances.json",
-			)
-			.json<NuancePayload[]>();
+		const res = await fetch(
+			"https://codeberg.org/sonic-liberation/blubber-junkyard-elitism/raw/branch/main/nuances.json",
+		);
+		const data: NuancePayload[] = await res.json();
 		data.sort((a, b) => b.v - a.v);
 		return data[0] as NuancePayload;
 	}
 
 	async generateTimedOnTimePassword(secret: string): Promise<string> {
-		const res = await this.client
-			.get("https://open.spotify.com/api/server-time")
-			.json<{ serverTime: number }>();
+		const res = await fetch("https://open.spotify.com/api/server-time");
+		const data: { serverTime: number } = await res.json();
 
-		const timestampSeconds = res.serverTime;
+		const timestampSeconds = data.serverTime;
 		const totp = await TOTP.generate(secret, {
 			algorithm: "SHA-1",
 			digits: 6,
@@ -159,14 +167,15 @@ class SpotifyAuthEndpoint implements IAuthEndpoint {
 			.split("")
 			.join("");
 
-		const res = await this.client.get(accessTokenUrl, {
+		const res = await fetch(accessTokenUrl, {
 			headers: {
 				Cookie: spDc ?? "",
 				"User-Agent": userAgent,
 			},
 		});
+		const data: AuthTokenResponse = await res.json();
 
-		return { body: await res.json<AuthTokenResponse>(), headers: res.headers };
+		return { body: data, headers: res.headers };
 	}
 
 	async credentialsFromCookie(cookies: Cookie[]): Promise<Credentials> {
@@ -203,20 +212,17 @@ class SpotifyAuthEndpoint implements IAuthEndpoint {
 		this.fireEvent("login");
 	}
 
-	refreshCredentials() {
+	async refreshCredentials() {
 		if (!this.credentials?.cookies) {
 			console.info(
 				"[refreshCredentials] No cookie found. Cannot refresh credentials.",
 			);
 			return;
 		}
-		return this.credentialsFromCookie(this.credentials.cookies).then(
-			(creds) => {
-				localStorage.setItem("credentials", JSON.stringify(creds));
-				this.credentials = creds;
-				this.fireEvent("refreshed");
-			},
-		);
+		const creds = await this.credentialsFromCookie(this.credentials.cookies);
+		localStorage.setItem("credentials", JSON.stringify(creds));
+		this.credentials = creds;
+		this.fireEvent("refreshed");
 	}
 
 	async authenticate(): Promise<void> {

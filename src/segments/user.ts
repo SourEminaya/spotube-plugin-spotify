@@ -22,13 +22,13 @@ export class UserEndpoint implements IUserEndpoint {
 	async savedPlaylists(offset = 0, limit = 50) {
 		const data = await this.client.user.savedPlaylists({ offset, limit });
 		return Converters.paginated(data, (items) =>
-			Converters.fullPlaylist(items),
+			Converters.simplePlaylist(items),
 		);
 	}
 
 	async savedAlbums(offset = 0, limit = 50) {
 		const data = await this.client.user.savedAlbums({ offset, limit });
-		return Converters.paginated(data, (items) => Converters.fullAlbum(items));
+		return Converters.paginated(data, (items) => Converters.simpleAlbum(items));
 	}
 
 	async savedArtists(offset = 0, limit = 50) {

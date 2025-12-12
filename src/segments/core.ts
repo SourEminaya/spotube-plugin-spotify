@@ -3,8 +3,6 @@ import type {
 	PluginUpdateAvailable,
 	ScrobbleDetails,
 } from "@spotube-app/plugin";
-import type { KyInstance } from "ky";
-import ky from "ky";
 import type { ICoreEndpoint } from "@spotube-app/plugin";
 import semver from "semver";
 
@@ -19,12 +17,6 @@ Not some greedy corporations and stupid middlemen.
 `;
 
 class CorePlugin implements ICoreEndpoint {
-	client: KyInstance;
-
-	constructor() {
-		this.client = ky.extend({});
-	}
-
 	async scrobble(_details: ScrobbleDetails): Promise<void> {
 		return;
 	}
@@ -40,20 +32,20 @@ class CorePlugin implements ICoreEndpoint {
 			);
 		}
 
-		const data = await this.client
-			.get(
-				"https://api.github.com/repos/sonic-liberation/spotube-plugin-spotify/releases/latest",
-				{
-					headers: {
-						Accept: "application/vnd.github.v3+json",
-					},
+		const res = await fetch(
+			"https://api.github.com/repos/sonic-liberation/spotube-plugin-spotify/releases/latest",
+			{
+				headers: {
+					Accept: "application/vnd.github.v3+json",
 				},
-			)
-			.json<{
-				tag_name: string;
-				body: string | undefined;
-				assets: { name: string; browser_download_url: string }[];
-			}>();
+			},
+		);
+		const data: {
+			tag_name: string;
+			body: string | undefined;
+			assets: { name: string; browser_download_url: string }[];
+		} = await res.json();
+
 		const latestVersion = semver.parse(data.tag_name);
 		if (!latestVersion) {
 			throw new Error(
