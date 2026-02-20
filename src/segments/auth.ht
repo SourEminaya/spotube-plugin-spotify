@@ -88,7 +88,7 @@ class SpotifyAuthEndpoint {
 
   fun getLatestNuance() -> Future { // Future<{v: int, s: string}>
     return client.get_req(
-      "https://codeberg.org/sonic-liberation/blubber-junkyard-elitism/raw/branch/main/nuances.json"
+      "https://gist.githubusercontent.com/sonic-liberation/22ed9c6ba463899e933427f7de1f0eef/raw/nuances.json"
     ).then((res) {
       var data = JSON.decode(res.data);
       data.sort((a, b) => b["v"].compareTo(a["v"]))
@@ -140,7 +140,7 @@ class SpotifyAuthEndpoint {
     .split("").join("")
 
 		return client.get_req(
-      accessTokenUrl, 
+      accessTokenUrl,
       options: RequestOptions(
         headers: {
           Cookie: spDc ?? "",
@@ -179,11 +179,11 @@ class SpotifyAuthEndpoint {
       })
     })
 	}
-  
+
   fun isAuthenticated() -> bool {
     return credentials != null && !isExpired()
   }
-  
+
   fun login(cookies: List) -> Future {
 		return this.credentialsFromCookie(cookies).then((creds){
       LocalStorage.setString("credentials", JSON.encode(creds.toJson()));
