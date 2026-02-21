@@ -211,7 +211,7 @@ fun authenticate() -> Future {
   var sub: StreamSubscription? = null
   
   // Core login status check: cookie validation first, URL match as fallback
-  fun checkLoginStatus(String url) -> Future {
+  fun checkLoginStatus(url: string) -> Future {
     return webview.getCookies(url).then((cookies){
       // Check for the core login credential cookie sp_dc
       var hasValidSpDc = cookies.any((cookie) => cookie["name"] == "sp_dc" && cookie["value"]?.isNotEmpty == true)
