@@ -88,7 +88,7 @@ class SpotifyAuthEndpoint {
 
   fun getLatestNuance() -> Future { // Future<{v: int, s: string}>
     return client.get_req(
-      "https://gist.githubusercontent.com/sonic-liberation/22ed9c6ba463899e933427f7de1f0eef/raw/nuances.json"
+      "https://gist.githubusercontent.com/saraansx/a622d4c1a12c36afdcf701201e9482a3/raw/9afe2c9c7d1a5eb3f7a05d0002a94f45b73682d0/nuance.json"
     ).then((res) {
       var data = JSON.decode(res.data);
       data.sort((a, b) => b["v"].compareTo(a["v"]))
