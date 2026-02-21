@@ -206,24 +206,40 @@ class SpotifyAuthEndpoint {
       controller.add({ type: "refreshed" }.toJson())
     })
 	}
-
-  fun authenticate() -> Future {
-    var webview = Webview(uri: "https://accounts.spotify.com/")
-
-    var sub: StreamSubscription = webview.onUrlRequestStream.listen((url){
+fun authenticate() -> Future {
+  var webview = Webview(uri: "https://accounts.spotify.com/login")
+  var sub: StreamSubscription? = null
+  
+  // Core login status check: cookie validation first, URL match as fallback
+  fun checkLoginStatus(String url) -> Future {
+    return webview.getCookies(url).then((cookies){
+      // Check for the core login credential cookie sp_dc
+      var hasValidSpDc = cookies.any((cookie) => cookie["name"] == "sp_dc" && cookie["value"]?.isNotEmpty == true)
+      // Optimized regex to match all status paths with or without intermediate segments
       var safeUrl = url.endsWith("/") ? url.substring(0, url.length - 1) : url
-      var exp = Regex("https:\\/\\/accounts.spotify.com\\/.+\\/status")
-      if(exp.hasMatch(safeUrl)) {
-        return webview.getCookies(url).then((cookies){
-          return login(cookies.map((cookie)=> cookie.toJson()).toList()).then(() {
-            return webview.close()
-          })
+      var isStatusUrl = Regex("https:\\/\\/accounts.spotify.com\\/.*status").hasMatch(safeUrl)
+      
+      if (hasValidSpDc || isStatusUrl) {
+        sub?.cancel() // Prevent duplicate trigger of the login logic
+        return login(cookies.map((cookie)=> cookie.toJson()).toList()).then(() {
+          return webview.close() // Close webview and return to Spotube after successful auth
         })
       }
     })
-
-    return webview.open()
   }
+
+  // Check login status on every URL change in the webview
+  sub = webview.onUrlRequestStream.listen((url){
+    checkLoginStatus(url)
+  })
+
+  // Clean up subscription when webview is manually closed
+  webview.onCloseStream.listen((_) {
+    sub?.cancel()
+  })
+
+  return webview.open()
+}
 
 	fun logout() {
 		credentials = null;
